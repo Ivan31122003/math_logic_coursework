@@ -14,4 +14,13 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+
+    <dependencies>
+        <dependency>
+            <groupId>net.sf.javabdd</groupId>
+            <artifactId>javabdd</artifactId>
+            <version>1.0b2</version>
+        </dependency>
+    </dependencies>
+
 </project>
