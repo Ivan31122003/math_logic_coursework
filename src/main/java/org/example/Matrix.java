@@ -40,6 +40,10 @@ public class Matrix {
         return entities.get(indexOfEntity).getNeighbor(indexOfNeighbor);
     }
 
+    public Integer getSize() {
+        return size;
+    }
+
     public void getInfoAboutEntities() {
         for (Entity entity : entities) {
             System.out.println(entity.getId() + ": left = " + entity.getNeighbor(0) + "; right = " + entity.getNeighbor(1));
