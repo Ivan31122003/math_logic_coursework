@@ -5,112 +5,86 @@ import net.sf.javabdd.BDDFactory;
 import net.sf.javabdd.JFactory;
 
 import java.util.List;
-//import net.sf.javabdd.BDD;
-//import net.sf.javabdd.BDDFactory;
-//import net.sf.javabdd.JFactory;
-//
-//import java.util.List;
 
 public class MyBdd {
-    private Matrix matrix;
+    private final Matrix matrix;
+    private final Integer numberOfEntitiesAndValues;
+    private final Integer fieldsNumber;
+    private BDDFactory factory;
+    private BDD[][][] properties;
+    private BDD constraints;
 
-    public MyBdd(Matrix matrix) {
+    public MyBdd(Matrix matrix, Integer fieldsNumber) {
         this.matrix = matrix;
-    }
+        this.fieldsNumber = fieldsNumber;
+        this.numberOfEntitiesAndValues = (int) Math.pow(this.matrix.getSize(), 2);
 
-    private void printSolution(byte[] solution) {
-        for (int objId = 0; objId < 9; objId++) {
-            System.out.print(objId + ": ");
-            for (int propIndex = 0; propIndex < 4; propIndex++) {
-                for (int value = 0; value < 9; value++) {
-                    int index = objId * 36 + propIndex * 9 + value;
-                    if (solution[index] == 1) {
-                        System.out.print(value + " ");
-                    }
+        factory = JFactory.init(1000000, 100000);
+        factory.setVarNum((int) Math.pow(numberOfEntitiesAndValues, 2) * this.fieldsNumber);
+
+        this.properties = new BDD[numberOfEntitiesAndValues][this.fieldsNumber][numberOfEntitiesAndValues];
+        for (int objId = 0; objId < numberOfEntitiesAndValues; objId++) {
+            for (int fieldIndex = 0; fieldIndex < this.fieldsNumber; fieldIndex++) {
+                for (int value = 0; value < numberOfEntitiesAndValues; value++) {
+                    properties[objId][fieldIndex][value] = factory.ithVar(objId * numberOfEntitiesAndValues * this.fieldsNumber  + fieldIndex * numberOfEntitiesAndValues + value);
                 }
             }
-            System.out.println();
         }
-        System.out.println("------------");
+        this.constraints = factory.one();
     }
+
+    // 1-ый тип ограничений
+    public void addConstraintFirstType(Integer objId, Integer field, Integer value) {
+        constraints = constraints.and(properties[objId][field][value]);
+    }
+
+    // 2-ой тип
+    public void addConstraintSecondType(Integer objId, Integer field1, Integer value1, Integer field2, Integer value2) {
+        constraints = constraints.and(properties[objId][field1][value1].imp(properties[objId][field2][value2]));
+    }
+
+    // 3-ий тип
+    public void addConstraintThirdType(Integer objId, Integer field1, Integer value1, String side, Integer field2, Integer value2) {
+        Integer sideInt = side.equals("left") ? 0 : 1;
+        constraints = constraints.and(properties[objId][field1][value1].imp(properties[matrix.getEntitiesNeighbourId(objId, sideInt)][field2][value2]));
+    }
+
+    // 4-ый тип
+    public void addConstraintFourthType(Integer objId, Integer field, Integer value, Integer fieldLeft, Integer valueLeft, Integer fieldRight, Integer valueRight) {
+        Integer leftNeighbour = matrix.getEntitiesNeighbourId(objId, 0);
+        Integer rightNeighbour = matrix.getEntitiesNeighbourId(objId, 1);
+        if (!leftNeighbour.equals(-1)) {
+            constraints = constraints.and(properties[objId][field][value].imp(properties[leftNeighbour][fieldLeft][valueLeft]));
+        }
+        if (!rightNeighbour.equals(-1)) {
+            constraints = constraints.and(properties[objId][field][value].imp(properties[rightNeighbour][fieldRight][valueRight]));
+        }
+    }
+
 
     public void getSolution() {
-        BDDFactory factory = JFactory.init(1000000, 100000);
-        factory.setVarNum(9 * 4 * 9);
-
-        BDD[][][] properties = new BDD[9][4][9];
-        for (int objId = 0; objId < 9; objId++) {
-            for (int propIndex = 0; propIndex < 4; propIndex++) {
-                for (int value = 0; value < 9; value++) {
-                    properties[objId][propIndex][value] = factory.ithVar(objId * 36 + propIndex * 9 + value);
-                }
-            }
-        }
-
-        BDD constraints = factory.one();
-
-        // 1-ый тип условий
-        constraints = constraints.and(properties[0][0][3]);
-        constraints = constraints.and(properties[1][3][8]);
-        constraints = constraints.and(properties[4][3][4]);
-        constraints = constraints.and(properties[5][2][0]);
-        constraints = constraints.and(properties[6][1][7]);
-        constraints = constraints.and(properties[0][2][1]);
-//        constraints = constraints.and(properties[8][1][8]);
-
-        // 2-ой тип
-        constraints = constraints.and(properties[5][2][0].imp(properties[5][3][0]));
-        constraints = constraints.and(properties[6][1][7].imp(properties[6][0][1]));
-        constraints = constraints.and(properties[1][3][8].imp(properties[1][1][0]));
-        constraints = constraints.and(properties[0][2][1].imp(properties[0][1][1]));
-        constraints = constraints.and(properties[4][3][4].imp(properties[4][0][0]));
-
-        // 3-ий тип
-        constraints = constraints.and(properties[6][1][7].imp(properties[matrix.getEntitiesNeighbourId(6, 1)][2][2]));
-        constraints = constraints.and(properties[1][1][0].imp(properties[matrix.getEntitiesNeighbourId(1, 1)][0][2]));
-        constraints = constraints.and(properties[4][3][4].imp(properties[matrix.getEntitiesNeighbourId(4, 0)][3][1]));
-        constraints = constraints.and(properties[0][2][1].imp(properties[matrix.getEntitiesNeighbourId(0, 1)][2][3]));
-        constraints = constraints.and(properties[1][2][2].imp(properties[matrix.getEntitiesNeighbourId(1, 1)][1][2]));
-
-        // 4-ый тип
-        constraints = constraints.and(properties[4][2][3].imp(properties[matrix.getEntitiesNeighbourId(4, 1)][3][2]));
-        constraints = constraints.and(properties[0][0][3].imp(properties[matrix.getEntitiesNeighbourId(0, 1)][1][3]));
-        constraints = constraints.and(properties[1][1][0].imp(properties[matrix.getEntitiesNeighbourId(1, 0)][3][3]));
-
-        // Допы
-        constraints = constraints.and(properties[2][0][4]);
-        constraints = constraints.and(properties[3][1][4]);
-        constraints = constraints.and(properties[7][2][5]);
-        constraints = constraints.and(properties[2][3][5]);
-        constraints = constraints.and(properties[3][0][8]);
-        constraints = constraints.and(properties[7][1][5]);
-        constraints = constraints.and(properties[8][0][5]);
-        constraints = constraints.and(properties[3][2][4]);
-        constraints = constraints.and(properties[2][2][6]);
-
-
-        for (int objId = 0; objId < 9; objId++) {
-            for (int propIndex = 0; propIndex < 4; propIndex++) {
+        // Любое поле любого объекта должно иметь значение
+        for (int objId = 0; objId < numberOfEntitiesAndValues; objId++) {
+            for (int fieldIndex = 0; fieldIndex < fieldsNumber; fieldIndex++) {
                 BDD atLeastOne = factory.zero();
                 BDD atMostOne = factory.one();
-
-                for (int value = 0; value < 9; value++) {
-                    atLeastOne = atLeastOne.or(properties[objId][propIndex][value]);
-                    for (int otherValue = value + 1; otherValue < 9; otherValue++) {
-                        atMostOne = atMostOne.and(properties[objId][propIndex][value].not().or(properties[objId][propIndex][otherValue].not()));
+                for (int value = 0; value < numberOfEntitiesAndValues; value++) {
+                    atLeastOne = atLeastOne.or(properties[objId][fieldIndex][value]);
+                    for (int otherValue = value + 1; otherValue < numberOfEntitiesAndValues; otherValue++) {
+                        atMostOne = atMostOne.and(properties[objId][fieldIndex][value].not().or(properties[objId][fieldIndex][otherValue].not()));
                     }
                 }
-
                 constraints = constraints.and(atLeastOne.and(atMostOne));
             }
         }
 
-        for (int propIndex = 0; propIndex < 4; propIndex++) {
-            for (int value = 0; value < 9; value++) {
-                for (int obj1 = 0; obj1 < 9; obj1++) {
-                    for (int obj2 = obj1 + 1; obj2 < 9; obj2++) {
+        // Значение одного поля двух любых объектов должно быть разным
+        for (int fieldIndex = 0; fieldIndex < fieldsNumber; fieldIndex++) {
+            for (int value = 0; value < numberOfEntitiesAndValues; value++) {
+                for (int obj1 = 0; obj1 < numberOfEntitiesAndValues; obj1++) {
+                    for (int obj2 = obj1 + 1; obj2 < numberOfEntitiesAndValues; obj2++) {
                         constraints = constraints.and(
-                                properties[obj1][propIndex][value].not().or(properties[obj2][propIndex][value].not())
+                                properties[obj1][fieldIndex][value].not().or(properties[obj2][fieldIndex][value].not())
                         );
                     }
                 }
@@ -126,5 +100,21 @@ public class MyBdd {
                 printSolution(solution);
         }
         System.out.println("Всего решений: " + solutionCount);
+    }
+
+    private void printSolution(byte[] solution) {
+        for (int objId = 0; objId < numberOfEntitiesAndValues; objId++) {
+            System.out.print(objId + ": ");
+            for (int fieldIndex = 0; fieldIndex < fieldsNumber; fieldIndex++) {
+                for (int value = 0; value < numberOfEntitiesAndValues; value++) {
+                    int index = objId * numberOfEntitiesAndValues * fieldsNumber + fieldIndex * numberOfEntitiesAndValues + value;
+                    if (solution[index] == 1) {
+                        System.out.print(value + " ");
+                    }
+                }
+            }
+            System.out.println();
+        }
+        System.out.println("------------");
     }
 }
