@@ -22,7 +22,7 @@ public class MyBdd {
         factory = JFactory.init(1000000, 100000);
         factory.setVarNum((int) Math.pow(numberOfEntitiesAndValues, 2) * this.fieldsNumber);
 
-        this.properties = new BDD[numberOfEntitiesAndValues][this.fieldsNumber][numberOfEntitiesAndValues];
+        this.properties = new BDD[this.numberOfEntitiesAndValues][this.fieldsNumber][this.numberOfEntitiesAndValues];
         for (int objId = 0; objId < numberOfEntitiesAndValues; objId++) {
             for (int fieldIndex = 0; fieldIndex < this.fieldsNumber; fieldIndex++) {
                 for (int value = 0; value < numberOfEntitiesAndValues; value++) {

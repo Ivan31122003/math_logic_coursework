@@ -4,6 +4,7 @@ public class Main {
     public static void main(String[] args) {
         Matrix matrix = new Matrix(3);
         matrix.getInfoAboutEntities();
+
         MyBdd bdd = new MyBdd(matrix, 4);
 
         // 1-ый тип ограничений
@@ -45,8 +46,7 @@ public class Main {
         bdd.addConstraintFirstType(6, 3, 6);
         bdd.addConstraintFirstType(8,2, 7);
 
+        // Поиск решений
         bdd.getSolution();
     }
 }
-
-
